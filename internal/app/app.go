@@ -19,6 +19,7 @@ import (
 	"github.com/pranshuparmar/witr/internal/target"
 	"github.com/pranshuparmar/witr/internal/tui"
 	"github.com/pranshuparmar/witr/pkg/model"
+	witrskill "github.com/pranshuparmar/witr/plugins/witr/skills/witr"
 	"github.com/spf13/cobra"
 )
 
@@ -175,6 +176,7 @@ func init() {
 	rootCmd.Flags().Bool("mermaid", false, "show ancestry as a Mermaid.js diagram")
 	rootCmd.Flags().Bool("dot", false, "show ancestry as a Graphviz DOT digraph")
 	rootCmd.Flags().Bool("mcp", false, "run as Model Context Protocol (MCP) server over stdio")
+	rootCmd.Flags().Bool("skill", false, "print the witr agent skill (Markdown) and exit")
 
 }
 
@@ -193,6 +195,11 @@ type appFlags struct {
 }
 
 func runApp(cmd *cobra.Command, args []string) error {
+	if boolFlag(cmd, "skill") {
+		fmt.Fprint(os.Stdout, witrskill.Markdown)
+		return nil
+	}
+
 	mcpFlag, _ := cmd.Flags().GetBool("mcp")
 	if mcpFlag {
 		return mcp.RunServer(os.Stdin, os.Stdout, version)

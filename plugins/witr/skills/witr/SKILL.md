@@ -20,6 +20,20 @@ Check that it's installed with `witr --version`. If it isn't, tell the user and 
 
 Always give a target and `--json`. Without a target, `--json` exits with code 4 and asks for one; a bare `witr` opens an interactive dashboard, or exits with code 4 when there's no terminal.
 
+## If your harness exposes a witr tool, use it
+
+Some harnesses give the agent a native witr tool instead of a shell (DeepSeek
+Harness provides `witr_trace`). Prefer that tool over running `witr` in a shell:
+it reports the exit codes below as answers rather than errors, omits process
+environment variables, resolves relative file targets against the session's
+working directory, and runs under the harness's own approval. The tables here
+still say what to ask for — map them onto the tool's `kind` and `format`
+arguments.
+
+Any harness can read this skill straight from the installed binary:
+
+    witr --skill
+
 ## Pick the command
 
 | Situation | Command |

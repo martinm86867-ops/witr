@@ -887,6 +887,11 @@ For fuller guidance, install the official skill: it tells an agent which command
 
 - **Claude Code:** run `/plugin marketplace add pranshuparmar/witr`, then `/plugin install witr@witr`.
 - **Other agents that read Agent Skills, or a manual install:** copy [`plugins/witr/skills/witr`](plugins/witr/skills/witr) into the agent's skills folder (for Claude Code, `~/.claude/skills/`).
+- **Any agent, with nothing to copy:** the skill is embedded in the binary. `witr --skill` prints it as Markdown, so an installer or a harness can fetch it from the same binary that implements it and never vendor a stale copy:
+
+  ```bash
+  mkdir -p ~/.claude/skills/witr && witr --skill > ~/.claude/skills/witr/SKILL.md
+  ```
 
 ---
 
