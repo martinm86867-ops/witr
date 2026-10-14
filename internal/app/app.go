@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pranshuparmar/witr/internal/mcp"
 	"github.com/pranshuparmar/witr/internal/output"
 	"github.com/pranshuparmar/witr/internal/pipeline"
 	procpkg "github.com/pranshuparmar/witr/internal/proc"
@@ -171,6 +172,9 @@ func init() {
 	rootCmd.Flags().Bool("verbose", false, "show extended process information")
 	rootCmd.Flags().BoolP("exact", "x", false, "use exact name matching (no substring search)")
 	rootCmd.Flags().BoolP("interactive", "i", false, "interactive mode (TUI)")
+	rootCmd.Flags().Bool("mermaid", false, "show ancestry as a Mermaid.js diagram")
+	rootCmd.Flags().Bool("dot", false, "show ancestry as a Graphviz DOT digraph")
+	rootCmd.Flags().Bool("mcp", false, "run as Model Context Protocol (MCP) server over stdio")
 
 }
 
@@ -178,6 +182,8 @@ func init() {
 type appFlags struct {
 	short   bool
 	tree    bool
+	mermaid bool
+	dot     bool
 	json    bool
 	warn    bool
 	noColor bool
@@ -187,6 +193,11 @@ type appFlags struct {
 }
 
 func runApp(cmd *cobra.Command, args []string) error {
+	mcpFlag, _ := cmd.Flags().GetBool("mcp")
+	if mcpFlag {
+		return mcp.RunServer(os.Stdin, os.Stdout, version)
+	}
+
 	interactiveFlag, _ := cmd.Flags().GetBool("interactive")
 	if interactiveFlag {
 		return runInteractive(orderedTargets(cmd, os.Args[1:], args), boolFlag(cmd, "exact"))
@@ -200,7 +211,7 @@ func runApp(cmd *cobra.Command, args []string) error {
 
 	// With no target the TUI opens, unless an output mode was asked for: that
 	// needs something to explain, and gets the "must specify" error below.
-	outputMode := envFlag || boolFlag(cmd, "short") || boolFlag(cmd, "tree") || boolFlag(cmd, "json") || boolFlag(cmd, "warnings") || boolFlag(cmd, "verbose")
+	outputMode := envFlag || boolFlag(cmd, "short") || boolFlag(cmd, "tree") || boolFlag(cmd, "mermaid") || boolFlag(cmd, "dot") || boolFlag(cmd, "json") || boolFlag(cmd, "warnings") || boolFlag(cmd, "verbose")
 	if !outputMode && len(pidFlags) == 0 && len(portFlags) == 0 && len(fileFlags) == 0 && len(containerFlags) == 0 && len(args) == 0 {
 		return runInteractive(nil, false)
 	}
@@ -210,6 +221,8 @@ func runApp(cmd *cobra.Command, args []string) error {
 		exact:   boolFlag(cmd, "exact"),
 		short:   boolFlag(cmd, "short"),
 		tree:    boolFlag(cmd, "tree"),
+		mermaid: boolFlag(cmd, "mermaid"),
+		dot:     boolFlag(cmd, "dot"),
 		json:    boolFlag(cmd, "json"),
 		warn:    boolFlag(cmd, "warnings"),
 		noColor: boolFlag(cmd, "no-color"),
@@ -614,7 +627,7 @@ func processTarget(cmd *cobra.Command, outw io.Writer, outp output.Printer, t mo
 	res, err := pipeline.AnalyzePID(pipeline.AnalyzeConfig{
 		PID:     pid,
 		Verbose: flags.verbose,
-		Tree:    flags.tree,
+		Tree:    flags.tree || flags.mermaid || flags.dot,
 		Target:  t,
 	})
 
@@ -808,6 +821,10 @@ func renderResult(outw io.Writer, res model.Result, flags appFlags, multiMode bo
 		}
 	case flags.warn:
 		output.RenderWarnings(outw, res, colorEnabled)
+	case flags.mermaid:
+		output.PrintMermaid(outw, res.Ancestry, res.Children)
+	case flags.dot:
+		output.PrintDot(outw, res.Ancestry, res.Children)
 	case flags.tree:
 		output.PrintTree(outw, res.Ancestry, res.Children, colorEnabled)
 	case flags.short:
@@ -981,7 +998,7 @@ func analyzeContainer(cmd *cobra.Command, outw io.Writer, outp output.Printer, t
 	res, err := pipeline.AnalyzePID(pipeline.AnalyzeConfig{
 		PID:       pid,
 		Verbose:   flags.verbose,
-		Tree:      flags.tree,
+		Tree:      flags.tree || flags.mermaid || flags.dot,
 		Target:    t,
 		Container: match,
 	})
